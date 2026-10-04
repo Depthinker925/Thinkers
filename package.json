@@ -1,0 +1,28 @@
+{
+  "name": "thinkers",
+  "version": "3.0.0",
+  "description": "A focus timer for the Obsidian right sidebar: Pomodoro and stopwatch, with sessions saved as plain markdown.",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs production",
+    "typecheck": "tsc -noEmit -skipLibCheck"
+  },
+  "keywords": [
+    "obsidian",
+    "obsidian-plugin",
+    "timer",
+    "pomodoro",
+    "stopwatch",
+    "focus"
+  ],
+  "author": "Thinkers",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "esbuild": "^0.20.0",
+    "obsidian": "1.13.1",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3"
+  }
+}

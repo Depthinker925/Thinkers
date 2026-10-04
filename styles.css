@@ -1,0 +1,817 @@
+/* Trimmed to the rules the surviving code can apply. */
+
+.thinkers-view {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	box-sizing: border-box;
+}
+
+/* The mode, written small. Both states give it the same box — same size, same padding,
+   same line height — so swapping the word cannot change the panel's height. Only the
+   colour and the cursor change: pressable while idle, a plain label while running. */
+.thinkers-phase {
+	display: block;
+	padding: 1px 0;
+	text-align: center;
+	font-size: var(--font-ui-small);
+	font-weight: var(--font-semibold);
+	line-height: 1.5;
+	color: var(--text-normal);
+}
+
+.thinkers-phase.thinkers-phase-switch {
+	color: var(--text-muted);
+	cursor: pointer;
+	user-select: none;
+	transition: color 120ms ease;
+}
+
+.thinkers-phase.thinkers-phase-switch:hover,
+.thinkers-phase.thinkers-phase-switch:focus-visible {
+	color: var(--text-normal);
+}
+
+.thinkers-phase.thinkers-phase-switch:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 2px;
+}
+
+/* A full circle. It is the same size in every state, which is what keeps the panel from
+   moving when a session starts. */
+.thinkers-gauge {
+	position: relative;
+	width: 100%;
+	max-width: 196px;
+	aspect-ratio: 1;
+	margin: var(--size-4-2) auto var(--size-4-3);
+}
+
+.thinkers-ring {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+
+.thinkers-ring-track {
+	fill: none;
+	stroke: var(--background-modifier-border);
+	stroke-width: 8;
+}
+
+.thinkers-ring-progress {
+	fill: none;
+	stroke: var(--interactive-accent);
+	stroke-width: 8;
+	stroke-linecap: round;
+	transition: stroke-dashoffset 0.4s linear;
+}
+
+/* The clock sits in the middle of the circle and is the only control: press it to start
+   a session, press it again to end one. */
+.thinkers-time {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 1.9em;
+	line-height: 1;
+	font-variant-numeric: tabular-nums;
+	font-weight: var(--font-bold);
+	color: var(--text-normal);
+	cursor: pointer;
+	user-select: none;
+	border-radius: 50%;
+	transition: color 0.15s ease;
+}
+
+/* Hovering the clock changes its colour.
+   The colour deliberately comes from --text-accent and NOT from --interactive-accent:
+   some themes remap --interactive-accent onto a neutral base colour, and in Obsidian's
+   dark theme --text-normal is that same base colour. Baseline does exactly this
+   (`body:not(.accented-interface) { --interactive-accent: var(--color-base-100) }`), so
+   hovering would "change" the digits to the colour they already had and nothing would
+   appear to happen. --text-accent keeps pointing at the real accent in those themes. */
+.thinkers-time:hover,
+.thinkers-time:focus-visible {
+	color: var(--text-accent, var(--color-accent, #7f6df2));
+}
+
+.thinkers-time:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: -8px;
+}
+
+.thinkers-btn {
+	flex: 1 1 auto;
+	min-height: 44px;
+	padding: var(--size-2-2) var(--size-4-2);
+	border: none;
+	background: none;
+	color: var(--text-muted);
+	cursor: pointer;
+	font-size: var(--font-ui-small);
+	transition: color 120ms ease;
+}
+
+.thinkers-btn:hover {
+	color: var(--text-normal);
+}
+
+.thinkers-btn-primary {
+	color: var(--interactive-accent);
+	font-weight: var(--font-semibold);
+}
+
+.thinkers-btn-primary:hover {
+	color: var(--interactive-accent-hover);
+}
+
+.thinkers-btn-danger {
+	color: var(--text-error);
+}
+
+.thinkers-recovery {
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	padding: var(--size-4-2);
+	margin-bottom: var(--size-4-2);
+}
+
+.thinkers-recovery-title {
+	font-weight: var(--font-semibold);
+	color: var(--text-normal);
+}
+
+.thinkers-recovery-body {
+	font-size: var(--font-ui-small);
+	color: var(--text-muted);
+	margin: var(--size-2-1) 0 var(--size-4-1);
+}
+
+.thinkers-recovery-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-2-2) var(--size-4-3);
+}
+
+.thinkers-stats {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: var(--size-2-2);
+	margin-bottom: var(--size-4-3);
+}
+
+.thinkers-stat {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: var(--size-4-1);
+	background: var(--background-secondary);
+	border-radius: var(--radius-s);
+}
+
+.thinkers-stat-value {
+	font-size: var(--font-ui-large);
+	font-weight: var(--font-bold);
+	color: var(--text-normal);
+}
+
+.thinkers-stat-label {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.thinkers-splitstats {
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	padding: var(--size-4-2);
+	margin-bottom: var(--size-4-3);
+}
+
+.thinkers-splitstats-title {
+	font-weight: var(--font-semibold);
+	color: var(--text-normal);
+	margin-bottom: var(--size-2-2);
+}
+
+.thinkers-splitstats-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: var(--size-4-2);
+}
+
+.thinkers-splitstats-col {
+	min-width: 0;
+}
+
+.thinkers-splitstats-col-title {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	margin-bottom: var(--size-2-1);
+}
+
+.thinkers-splitstats-list {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-1);
+}
+
+.thinkers-splitstats-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: var(--size-2-1) var(--size-2-2);
+}
+
+.thinkers-splitstats-label {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+
+.thinkers-splitstats-value {
+	color: var(--text-normal);
+	font-weight: var(--font-semibold);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.thinkers-cal-nav {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-2);
+	margin-bottom: var(--size-4-2);
+}
+
+.thinkers-cal-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 32px;
+	min-height: 32px;
+	padding: var(--size-2-1);
+	border: none;
+	background: none;
+	color: var(--text-muted);
+	cursor: pointer;
+	transition: color 120ms ease;
+}
+
+.thinkers-cal-btn:hover {
+	color: var(--text-normal);
+}
+
+.thinkers-cal-label {
+	flex: 1;
+	text-align: center;
+	font-weight: var(--font-semibold);
+	color: var(--text-normal);
+}
+
+.thinkers-cal-today {
+	padding: var(--size-2-1) var(--size-4-2);
+}
+
+.thinkers-cal-weekdays {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	gap: var(--size-2-1);
+	margin-bottom: var(--size-2-1);
+}
+
+.thinkers-cal-weekday {
+	text-align: center;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.thinkers-cal-grid {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	gap: var(--size-2-1);
+}
+
+.thinkers-day {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: 44px;
+	padding: var(--size-2-1);
+	border-radius: var(--radius-s);
+	background: var(--background-secondary);
+	cursor: pointer;
+	color: var(--text-normal);
+}
+
+.thinkers-day-blank {
+	background: transparent;
+	cursor: default;
+}
+
+.thinkers-day-today {
+	outline: 1px solid var(--interactive-accent);
+}
+
+.thinkers-day-num {
+	font-size: var(--font-ui-small);
+}
+
+.thinkers-detail-total {
+	font-size: var(--font-ui-small);
+	color: var(--text-muted);
+	margin-bottom: var(--size-2-2);
+}
+
+.thinkers-detail-rest-total {
+	color: var(--text-faint);
+}
+
+.thinkers-detail-empty {
+	font-size: var(--font-ui-small);
+	color: var(--text-faint);
+}
+
+.thinkers-session-list {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-1);
+}
+
+.thinkers-session {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: var(--size-2-2);
+	background: var(--background-secondary);
+	border-radius: var(--radius-s);
+}
+
+.thinkers-session-rest {
+	border-left: 3px solid var(--interactive-accent);
+}
+
+.thinkers-session-info {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.thinkers-session-range {
+	color: var(--text-normal);
+	font-variant-numeric: tabular-nums;
+}
+
+.thinkers-session-meta {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.thinkers-session-actions {
+	display: flex;
+	gap: var(--size-2-1);
+}
+
+.thinkers-icon-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 32px;
+	min-height: 32px;
+	border: none;
+	background: transparent;
+	color: var(--text-muted);
+	border-radius: var(--radius-s);
+	cursor: pointer;
+}
+
+.thinkers-icon-btn:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.thinkers-icon-danger:hover {
+	color: var(--text-error);
+}
+
+.thinkers-hidden {
+	display: none;
+}
+
+/* The mode sits under the circle. It is the only text in the panel, and it is the same
+   single line in both states, so swapping "Pomodoro" for the focus phase moves nothing. */
+.thinkers-modelabel {
+	text-align: center;
+	margin-top: var(--size-2-2);
+}
+
+.thinkers-report-box {
+	margin-bottom: var(--size-4-6);
+}
+
+.thinkers-report-title {
+	font-weight: var(--font-bold);
+	color: var(--text-normal);
+	margin-bottom: var(--size-4-3);
+}
+
+/* Spacing between the seven-day chart and the month calendar below it. */
+.thinkers-calendar-box {
+	margin-top: var(--size-4-5);
+}
+
+.thinkers-report-stats {
+	display: flex;
+	gap: var(--size-4-4);
+	margin-bottom: var(--size-4-3);
+}
+
+.thinkers-report-stat {
+	flex: 1;
+}
+
+.thinkers-report-stat-value {
+	font-weight: 700;
+	color: var(--text-normal);
+	font-size: 1.4em;
+	font-variant-numeric: tabular-nums;
+}
+
+.thinkers-report-stat-label {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	margin-top: var(--size-2-1);
+	letter-spacing: 0.06em;
+}
+
+.thinkers-report-chart {
+	display: flex;
+	align-items: flex-end;
+	gap: var(--size-2-2);
+	height: 140px;
+	padding: var(--size-3-1) 0 0;
+}
+
+.thinkers-report-col {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: flex-end;
+	height: 100%;
+	gap: var(--size-2-2);
+}
+
+.thinkers-report-value {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+	font-variant-numeric: tabular-nums;
+}
+
+.thinkers-report-bar-wrap {
+	width: 100%;
+	flex: 1;
+	display: flex;
+	align-items: flex-end;
+}
+
+.thinkers-report-bar {
+	width: 100%;
+	height: var(--thinkers-report-bar-height, 0%);
+	border-radius: 2px 2px 0 0;
+	background: var(--interactive-accent);
+	opacity: 0.55;
+	min-height: 2px;
+	transition: opacity 160ms ease;
+}
+
+.thinkers-report-col:hover .thinkers-report-bar {
+	opacity: 0.9;
+}
+
+.thinkers-report-bar-today {
+	opacity: 1;
+}
+
+.thinkers-report-day {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.thinkers-status {
+	font-variant-numeric: tabular-nums;
+}
+
+.thinkers-sidebar-view {
+	height: 100%;
+	box-sizing: border-box;
+	overflow-y: auto;
+	padding: var(--size-4-2, 8px) var(--size-4-2, 8px) var(--size-4-8, 32px);
+}
+
+.thinkers-sidebar-section + .thinkers-sidebar-section {
+	margin-top: var(--size-4-5);
+	padding-top: var(--size-4-4);
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.thinkers-sidebar-body .thinkers-view {
+	height: auto;
+	width: 100%;
+}
+
+.thinkers-day-dot {
+	display: block;
+	width: 8px;
+	height: 8px;
+	margin: 3px auto 0;
+	border-radius: 50%;
+	background: var(--interactive-accent);
+	opacity: 0;
+	transform: scale(0.5);
+	transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.thinkers-day-modal {
+	min-width: 320px;
+}
+
+.thinkers-day-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--size-2-3);
+	margin-bottom: var(--size-4-3);
+}
+
+.thinkers-day-btn {
+	padding: var(--size-2-3) var(--size-4-3);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	background: var(--background-secondary);
+	color: var(--text-normal);
+	font-size: var(--font-ui-small);
+	cursor: pointer;
+	transition: background 120ms ease, border-color 120ms ease;
+}
+
+.thinkers-day-btn:hover {
+	background: var(--background-modifier-hover);
+	border-color: var(--interactive-accent);
+}
+
+.thinkers-day-btn-diary {
+	border-color: var(--interactive-accent);
+	color: var(--text-accent);
+}
+
+@media (max-width: 500px) {
+.thinkers-gauge {
+		max-width: 160px;
+	
+}
+.thinkers-time {
+		font-size: 1.7em;
+	
+}
+.thinkers-stats {
+		grid-template-columns: repeat(2, 1fr);
+	
+}
+.thinkers-day {
+		min-height: 40px;
+	
+}
+}
+
+@media (max-width: 600px) {
+.thinkers-report-stats {
+		flex-direction: column;
+	
+}
+}
+
+/* ---------- The day, as a ring ---------- */
+
+/* Focus and rest for the day selected in the calendar, under the week/month totals. */
+.thinkers-ratio {
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	padding: var(--size-4-2);
+	margin-bottom: var(--size-4-3);
+}
+
+.thinkers-ratio-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: var(--size-2-1) var(--size-4-2);
+	margin-bottom: var(--size-4-2);
+}
+
+.thinkers-ratio-title {
+	font-weight: var(--font-semibold);
+	color: var(--text-normal);
+}
+
+.thinkers-ratio-day {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+.thinkers-ratio-body {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-3);
+}
+
+.thinkers-ratio-gauge {
+	position: relative;
+	flex: 0 0 auto;
+	width: 104px;
+	height: 104px;
+}
+
+.thinkers-ratio-ring {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+.thinkers-ratio-track,
+.thinkers-ratio-focus,
+.thinkers-ratio-rest {
+	fill: none;
+	stroke-width: 12;
+}
+
+.thinkers-ratio-track {
+	stroke: var(--background-modifier-border);
+}
+
+/* The arcs are drawn in --text-accent rather than --interactive-accent: themes that map
+   the accent onto a neutral base colour (Baseline does) would paint the focus arc in the
+   same colour as the panel behind it. */
+.thinkers-ratio-focus {
+	stroke: var(--text-accent, var(--interactive-accent));
+	transition: stroke-dasharray 240ms ease, stroke-dashoffset 240ms ease;
+}
+
+.thinkers-ratio-rest {
+	stroke: var(--color-cyan, #22b8cf);
+	transition: stroke-dasharray 240ms ease, stroke-dashoffset 240ms ease;
+}
+
+.thinkers-ratio-center {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 1px;
+	pointer-events: none;
+}
+
+.thinkers-ratio-percent {
+	font-size: 1.25em;
+	font-weight: var(--font-bold);
+	line-height: 1.1;
+	color: var(--text-normal);
+	font-variant-numeric: tabular-nums;
+}
+
+.thinkers-ratio-center-label {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.thinkers-ratio-legend {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-2-2);
+}
+
+.thinkers-ratio-legend-row {
+	display: flex;
+	align-items: center;
+	gap: var(--size-2-2);
+}
+
+.thinkers-ratio-swatch {
+	flex: 0 0 auto;
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+}
+
+.thinkers-ratio-swatch-focus {
+	background: var(--text-accent, var(--interactive-accent));
+}
+
+.thinkers-ratio-swatch-rest {
+	background: var(--color-cyan, #22b8cf);
+}
+
+.thinkers-ratio-legend-label {
+	flex: 1 1 auto;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.thinkers-ratio-value {
+	color: var(--text-normal);
+	font-weight: var(--font-semibold);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.thinkers-ratio-caption {
+	margin-top: var(--size-4-2);
+	text-align: center;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+/* The day the ring is describing. Inset so the heat shading underneath stays readable;
+   "today" keeps its outer outline, so the two can never be confused. */
+.thinkers-day-selected {
+	box-shadow: inset 0 0 0 2px var(--text-accent, var(--interactive-accent));
+}
+
+/* ---------- The week the report covers ---------- */
+
+.thinkers-report-range {
+	margin: calc(-1 * var(--size-4-2)) 0 var(--size-4-2);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+	font-variant-numeric: tabular-nums;
+}
+
+/* ---------- The "what did you just do" prompt ---------- */
+
+.thinkers-prompt {
+	min-width: 320px;
+}
+
+.thinkers-prompt-meta {
+	margin-bottom: var(--size-4-3);
+	font-size: var(--font-ui-small);
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+/* ---------- How much was focused, per day ---------- */
+
+.thinkers-heat-0 {
+	background: var(--background-secondary);
+}
+
+.thinkers-heat-1 {
+	background: color-mix(in srgb, var(--interactive-accent) 18%, var(--background-primary));
+}
+
+.thinkers-heat-2 {
+	background: color-mix(in srgb, var(--interactive-accent) 36%, var(--background-primary));
+}
+
+.thinkers-heat-3 {
+	background: color-mix(in srgb, var(--interactive-accent) 54%, var(--background-primary));
+}
+
+.thinkers-heat-4 {
+	background: color-mix(in srgb, var(--interactive-accent) 72%, var(--background-primary));
+	color: var(--text-on-accent);
+}
+
+/* The dot is only ever shown on a day that has focus on it. */
+.thinkers-heat-1 .thinkers-day-dot,
+.thinkers-heat-2 .thinkers-day-dot,
+.thinkers-heat-3 .thinkers-day-dot,
+.thinkers-heat-4 .thinkers-day-dot {
+	opacity: 1;
+	transform: scale(1);
+}
+
+.thinkers-heat-4 .thinkers-day-dot {
+	background: var(--text-on-accent);
+}
+
+@media (max-width: 500px) {
+.thinkers-ratio-body {
+		flex-direction: column;
+		align-items: stretch;
+	
+}
+}
+

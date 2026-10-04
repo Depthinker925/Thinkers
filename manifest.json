@@ -1,0 +1,9 @@
+{
+  "id": "thinkers",
+  "name": "Thinkers",
+  "version": "3.0.0",
+  "minAppVersion": "1.13.0",
+  "description": "A focus timer in the right sidebar: Pomodoro and stopwatch, a week chart and a month calendar of your focus, and a focus/rest ring for any day you pick",
+  "author": "Thinkers",
+  "isDesktopOnly": true
+}
