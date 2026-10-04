@@ -2619,7 +2619,10 @@ function readSettings(raw) {
     const value = Number(source[key]);
     return Number.isFinite(value) ? Math.max(min, Math.round(value)) : DEFAULT_SETTINGS[key];
   };
-  const flag = (key) => typeof source[key] === "boolean" ? source[key] : DEFAULT_SETTINGS[key];
+  const flag = (key) => {
+    const value = source[key];
+    return typeof value === "boolean" ? value : DEFAULT_SETTINGS[key];
+  };
   return {
     focusMinutes: num("focusMinutes", 1),
     shortBreakMinutes: num("shortBreakMinutes", 1),
