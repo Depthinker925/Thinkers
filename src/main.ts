@@ -308,8 +308,10 @@ function readSettings(raw: Partial<ThinkersSettings> | undefined): ThinkersSetti
     const value = Number(source[key]);
     return Number.isFinite(value) ? Math.max(min, Math.round(value)) : DEFAULT_SETTINGS[key] as number;
   };
-  const flag = (key: keyof ThinkersSettings): boolean =>
-    typeof source[key] === "boolean" ? (source[key] as boolean) : (DEFAULT_SETTINGS[key] as boolean);
+  const flag = (key: keyof ThinkersSettings): boolean => {
+    const value = source[key];
+    return typeof value === "boolean" ? value : (DEFAULT_SETTINGS[key] as boolean);
+  };
 
   return {
     focusMinutes: num("focusMinutes", 1),

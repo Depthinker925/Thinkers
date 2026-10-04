@@ -108,6 +108,14 @@ npm run build      # bundled main.js + styles.css
 npm run typecheck  # tsc --noEmit
 ```
 
+## Releases
+
+Releases are built from source by GitHub Actions, not by hand. Pushing a tag that matches
+the `version` in `manifest.json` runs `.github/workflows/release.yml`, which installs from
+the committed lockfile with `npm ci`, typechecks, builds, and attaches `main.js`,
+`manifest.json` and `styles.css` to the release. The released `main.js` is therefore
+byte-for-byte what `npm ci && npm run build` produces for the tagged commit.
+
 ## Desktop only
 
 The plugin is marked `isDesktopOnly`. It has no mobile layout.
