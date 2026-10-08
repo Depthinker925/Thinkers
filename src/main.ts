@@ -10,8 +10,8 @@ import { ThinkersSettingTab } from "./settings-tab";
 import { openRecordModal } from "./modal";
 import { openPostSessionPrompt } from "./prompt-modal";
 import { disposeAudio, playChime, vibrate } from "./audio";
-import { loadDailyNotesConfig, openDiaryForDate } from "./diary";
-import type { DailyNotesConfig } from "./diary";
+import { openDiaryForDate, readCoreDailyNotes, resolveDiaryConfig } from "./diary";
+import type { CoreDailyNotesConfig, DailyNotesConfig } from "./diary";
 import { formatClock, formatDuration, todayKey } from "./utils";
 
 /**
@@ -27,7 +27,12 @@ export default class ThinkersPlugin extends Plugin {
   engine!: TimerEngine;
 
   private statusBar: HTMLElement | null = null;
-  private diaryConfig: DailyNotesConfig = { folder: "", format: "YYYY-MM-DD", template: "" };
+  /**
+   * The core Daily notes config as it was last read. The resolved diary folder is computed
+   * from this on every render rather than cached, so a folder renamed inside the vault is
+   * picked up without a reload.
+   */
+  private coreDaily: CoreDailyNotesConfig = { folder: "", format: "", template: "" };
 
   async onload(): Promise<void> {
     initLocale();
@@ -36,7 +41,7 @@ export default class ThinkersPlugin extends Plugin {
 
     this.storage = new DayStore(this.app, () => this.settings);
     this.engine = new TimerEngine(() => this.settings, this.buildHooks());
-    this.diaryConfig = await loadDailyNotesConfig(this.app, this.settings);
+    this.coreDaily = await readCoreDailyNotes(this.app);
 
     // Both lists include the view types this plugin used before it was renamed, so a
     // sidebar tab saved back then resolves to the same panel instead of coming up empty.
@@ -85,16 +90,32 @@ export default class ThinkersPlugin extends Plugin {
   }
 
   private openOnReady(): void {
-    const ready = () => void this.activatePanel();
+    const ready = () => {
+      // The vault is only fully indexed once the layout is ready, so the diary folder is
+      // resolved again here rather than trusting what was on disk during onload.
+      void this.refreshDiaryConfig().then(() => this.refreshFocus());
+      void this.activatePanel();
+    };
     if (this.app.workspace.layoutReady) ready();
     else this.app.workspace.onLayoutReady(ready);
   }
 
   private persist(): Promise<void> {
+    void this.refreshDiaryConfig();
     return this.saveData({
       settings: this.settings,
       runtime: this.engine.exportRuntime(),
     });
+  }
+
+  /** The diary note's folder, resolved against the vault exactly as it is right now. */
+  private getDiaryConfig(): DailyNotesConfig {
+    return resolveDiaryConfig(this.app, this.settings, this.coreDaily);
+  }
+
+  /** Re-read the core Daily notes config, which can change outside this plugin. */
+  private async refreshDiaryConfig(): Promise<void> {
+    this.coreDaily = await readCoreDailyNotes(this.app);
   }
 
   private timerDeps() {
@@ -109,7 +130,7 @@ export default class ThinkersPlugin extends Plugin {
       app: this.app,
       storage: this.storage,
       getSettings: () => this.settings,
-      getDiaryConfig: () => this.diaryConfig,
+      getDiaryConfig: () => this.getDiaryConfig(),
     };
   }
 
@@ -226,7 +247,7 @@ export default class ThinkersPlugin extends Plugin {
     this.addCommand({
       id: "open-diary",
       name: t("command.diary"),
-      callback: () => void openDiaryForDate(this.app, this.diaryConfig, todayKey()),
+      callback: () => void openDiaryForDate(this.app, this.getDiaryConfig(), todayKey()),
     });
   }
 

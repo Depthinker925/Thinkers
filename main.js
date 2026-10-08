@@ -72,6 +72,7 @@ var EN = {
   "notice.parseFailed": "Could not read the focus log for {day}",
   "notice.corrupted": "Focus log for {day} was unreadable and has been backed up as {file}",
   "notice.writeFailed": "Could not write the focus log: {message}",
+  "notice.diaryFailed": "Could not open the diary note: {message}",
   "stats.today": "Today",
   "stats.focusRestHeading": "Focus and rest",
   "stats.focusTotal": "Focus time",
@@ -200,6 +201,7 @@ var ZH = {
   "notice.parseFailed": "\u65E0\u6CD5\u8BFB\u53D6 {day} \u7684\u4E13\u6CE8\u8BB0\u5F55",
   "notice.corrupted": "{day} \u7684\u4E13\u6CE8\u8BB0\u5F55\u65E0\u6CD5\u89E3\u6790\uFF0C\u5DF2\u5907\u4EFD\u4E3A {file}",
   "notice.writeFailed": "\u5199\u5165\u4E13\u6CE8\u8BB0\u5F55\u5931\u8D25\uFF1A{message}",
+  "notice.diaryFailed": "\u6253\u5F00\u65E5\u8BB0\u5931\u8D25\uFF1A{message}",
   "stats.today": "\u4ECA\u65E5",
   "stats.focusRestHeading": "\u4E13\u6CE8\u4E0E\u4F11\u606F",
   "stats.focusTotal": "\u4E13\u6CE8",
@@ -363,6 +365,25 @@ function monthTitle(year, month) {
 
 // src/storage.ts
 var import_obsidian2 = require("obsidian");
+
+// src/vault.ts
+async function ensureFolder(app, path) {
+  if (path.length === 0)
+    return;
+  const parts = path.split("/").filter((p) => p.length > 0);
+  let current = "";
+  for (const part of parts) {
+    current = current.length > 0 ? `${current}/${part}` : part;
+    if (!app.vault.getFolderByPath(current)) {
+      try {
+        await app.vault.createFolder(current);
+      } catch (err) {
+        if (!app.vault.getFolderByPath(current))
+          throw err;
+      }
+    }
+  }
+}
 
 // src/utils.ts
 function pad(n) {
@@ -654,7 +675,7 @@ var DayStore = class {
       }
       try {
         if (!file) {
-          await this.ensureFolder(parent(path));
+          await ensureFolder(this.app, parent(path));
           const records2 = syncRestRecords(sortRecords(fn([])));
           this.lastSelfWrite.set(path, Date.now());
           const created = await this.app.vault.create(path, this.serialize(day, records2));
@@ -684,23 +705,6 @@ var DayStore = class {
     this.queues.set(day, next.catch(() => {
     }));
     return next;
-  }
-  async ensureFolder(path) {
-    if (path.length === 0)
-      return;
-    const parts = path.split("/").filter((p) => p.length > 0);
-    let current = "";
-    for (const part of parts) {
-      current = current.length > 0 ? `${current}/${part}` : part;
-      if (!this.app.vault.getFolderByPath(current)) {
-        try {
-          await this.app.vault.createFolder(current);
-        } catch (err) {
-          if (!this.app.vault.getFolderByPath(current))
-            throw err;
-        }
-      }
-    }
   }
   async backupCorrupted(file, day) {
     const stamp = String(Date.now());
@@ -1581,6 +1585,7 @@ var ConfirmDeleteModal = class extends import_obsidian4.Modal {
 
 // src/diary.ts
 var import_obsidian5 = require("obsidian");
+var DEFAULT_FORMAT = "YYYY-MM-DD";
 var WEEKDAY_FULL = {
   en: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
   zh: ["\u661F\u671F\u65E5", "\u661F\u671F\u4E00", "\u661F\u671F\u4E8C", "\u661F\u671F\u4E09", "\u661F\u671F\u56DB", "\u661F\u671F\u4E94", "\u661F\u671F\u516D"]
@@ -1592,42 +1597,61 @@ var WEEKDAY_SHORT = {
 function pad2(n) {
   return n < 10 ? `0${n}` : String(n);
 }
-async function loadDailyNotesConfig(app, settings) {
-  var _a, _b, _c;
-  let folder = settings.dailyNotesFolder.trim();
-  let format = settings.dailyNotesFormat.trim();
-  let template = "";
+async function readCoreDailyNotes(app) {
+  const empty = { folder: "", format: "", template: "" };
   try {
     const raw = await app.vault.adapter.read(`${app.vault.configDir}/daily-notes.json`);
     const cfg = JSON.parse(raw);
-    if (folder.length === 0)
-      folder = (_a = cfg.folder) != null ? _a : "";
-    if (format.length === 0)
-      format = (_b = cfg.format) != null ? _b : "YYYY-MM-DD";
-    template = (_c = cfg.template) != null ? _c : "";
+    const text = (value) => typeof value === "string" ? value : "";
+    return { folder: text(cfg.folder), format: text(cfg.format), template: text(cfg.template) };
   } catch (e) {
-    if (format.length === 0)
-      format = "YYYY-MM-DD";
+    return empty;
   }
-  return { folder: folder.replace(/^\/+|\/+$/g, ""), format, template };
+}
+function looseKey(path) {
+  return path.split("/").filter((segment) => segment.length > 0).map((segment) => segment.toLowerCase().replace(/[\s_-]+/g, "").replace(/s$/, "")).join("/");
+}
+function hasDateTokens(value) {
+  return fillDateTokens(value, /* @__PURE__ */ new Date()) !== value;
+}
+function matchExistingFolder(app, folder) {
+  const target = (0, import_obsidian5.normalizePath)(folder);
+  if (target.length === 0)
+    return "";
+  if (hasDateTokens(target))
+    return target;
+  const exact = app.vault.getFolderByPath(target);
+  if (exact)
+    return exact.path;
+  const wanted = looseKey(target);
+  const hits = app.vault.getAllLoadedFiles().filter((file) => file instanceof import_obsidian5.TFolder).filter((entry) => looseKey(entry.path) === wanted).sort((a, b) => a.path.length - b.path.length || (a.path < b.path ? -1 : 1));
+  return hits.length > 0 ? hits[0].path : target;
+}
+function resolveDiaryConfig(app, settings, core) {
+  const override = settings.dailyNotesFolder.trim();
+  const raw = (override.length > 0 ? override : core.folder).trim().replace(/^\/+|\/+$/g, "");
+  return {
+    folder: matchExistingFolder(app, raw),
+    format: settings.dailyNotesFormat.trim() || core.format || DEFAULT_FORMAT,
+    template: core.template
+  };
 }
 function fillDateTokens(template, date) {
   const locale = currentLocale();
-  const weekdayFull = WEEKDAY_FULL[locale][date.getDay()];
-  const weekdayShort = WEEKDAY_SHORT[locale][date.getDay()];
   const map = {
     YYYY: String(date.getFullYear()),
     MM: pad2(date.getMonth() + 1),
     M: String(date.getMonth() + 1),
     DD: pad2(date.getDate()),
     D: String(date.getDate()),
-    dddd: weekdayFull,
-    ddd: weekdayShort
+    dddd: WEEKDAY_FULL[locale][date.getDay()],
+    ddd: WEEKDAY_SHORT[locale][date.getDay()]
   };
-  return template.replace(/dddd|ddd|YYYY|MM|DD|M|D/g, (m) => {
-    var _a;
-    return (_a = map[m]) != null ? _a : m;
-  });
+  const long = template.replace(/(dddd|ddd|YYYY|MM|DD)/g, (token) => map[token]);
+  return long.replace(
+    /(^|[^A-Za-z])([MD])(?![A-Za-z])/g,
+    (_match, lead, token) => `${lead}${map[token]}`
+  );
 }
 function diaryPath(config, key) {
   const date = parseDateKey(key);
@@ -1636,25 +1660,51 @@ function diaryPath(config, key) {
   const base = folder.length > 0 ? `${folder}/${name}` : name;
   return (0, import_obsidian5.normalizePath)(`${base}.md`);
 }
+function parentPath(path) {
+  const idx = path.lastIndexOf("/");
+  return idx <= 0 ? "" : path.slice(0, idx);
+}
 async function openDiaryForDate(app, config, key) {
   const path = diaryPath(config, key);
-  const existing = app.vault.getAbstractFileByPath(path);
-  if (existing instanceof import_obsidian5.TFile) {
-    await app.workspace.getLeaf(false).openFile(existing);
-    return;
+  try {
+    const existing = app.vault.getAbstractFileByPath(path);
+    if (existing instanceof import_obsidian5.TFile) {
+      await app.workspace.getLeaf(false).openFile(existing);
+      return;
+    }
+    await ensureFolder(app, parentPath(path));
+    const content = await templateContent(app, config, key);
+    const file = await app.vault.create(path, content);
+    await app.workspace.getLeaf(false).openFile(file);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    new import_obsidian5.Notice(t("notice.diaryFailed", { message }));
   }
-  const content = await templateContent(app, config, key);
-  const file = await app.vault.create(path, content);
-  await app.workspace.getLeaf(false).openFile(file);
+}
+function findTemplate(app, config, date) {
+  var _a;
+  const folder = fillDateTokens(config.folder, date);
+  const name = (_a = config.template.split("/").pop()) != null ? _a : "";
+  const candidates = [];
+  if (folder.length > 0 && name.length > 0)
+    candidates.push(`${folder}/${name}`);
+  if (folder.length > 0)
+    candidates.push(`${folder}/Template.md`);
+  if (config.template.length > 0)
+    candidates.push(config.template);
+  for (const candidate of candidates) {
+    const file = app.vault.getAbstractFileByPath((0, import_obsidian5.normalizePath)(candidate));
+    if (file instanceof import_obsidian5.TFile)
+      return file;
+  }
+  return null;
 }
 async function templateContent(app, config, key) {
-  if (config.template.length === 0)
-    return "";
-  const templateFile = app.vault.getAbstractFileByPath((0, import_obsidian5.normalizePath)(config.template));
-  if (!(templateFile instanceof import_obsidian5.TFile))
+  const date = parseDateKey(key);
+  const templateFile = findTemplate(app, config, date);
+  if (!templateFile)
     return "";
   const raw = await app.vault.read(templateFile);
-  const date = parseDateKey(key);
   return raw.replace(/\{\{date\}\}/g, key).replace(/\{\{title\}\}/g, key).replace(/\{\{time\}\}/g, (/* @__PURE__ */ new Date()).toLocaleTimeString()).replace(/\{\{year\}\}/g, String(date.getFullYear())).replace(/\{\{month\}\}/g, pad2(date.getMonth() + 1)).replace(/\{\{day\}\}/g, pad2(date.getDate()));
 }
 
@@ -2365,7 +2415,12 @@ var ThinkersPlugin = class extends import_obsidian10.Plugin {
     super(...arguments);
     this.settings = { ...DEFAULT_SETTINGS };
     this.statusBar = null;
-    this.diaryConfig = { folder: "", format: "YYYY-MM-DD", template: "" };
+    /**
+     * The core Daily notes config as it was last read. The resolved diary folder is computed
+     * from this on every render rather than cached, so a folder renamed inside the vault is
+     * picked up without a reload.
+     */
+    this.coreDaily = { folder: "", format: "", template: "" };
   }
   async onload() {
     var _a;
@@ -2374,7 +2429,7 @@ var ThinkersPlugin = class extends import_obsidian10.Plugin {
     this.settings = readSettings(loaded == null ? void 0 : loaded.settings);
     this.storage = new DayStore(this.app, () => this.settings);
     this.engine = new TimerEngine(() => this.settings, this.buildHooks());
-    this.diaryConfig = await loadDailyNotesConfig(this.app, this.settings);
+    this.coreDaily = await readCoreDailyNotes(this.app);
     for (const type of TIMER_VIEW_TYPES) {
       this.registerView(type, (leaf) => new TimerSidebarView(leaf, this.timerDeps()));
     }
@@ -2412,17 +2467,29 @@ var ThinkersPlugin = class extends import_obsidian10.Plugin {
     disposeAudio();
   }
   openOnReady() {
-    const ready = () => void this.activatePanel();
+    const ready = () => {
+      void this.refreshDiaryConfig().then(() => this.refreshFocus());
+      void this.activatePanel();
+    };
     if (this.app.workspace.layoutReady)
       ready();
     else
       this.app.workspace.onLayoutReady(ready);
   }
   persist() {
+    void this.refreshDiaryConfig();
     return this.saveData({
       settings: this.settings,
       runtime: this.engine.exportRuntime()
     });
+  }
+  /** The diary note's folder, resolved against the vault exactly as it is right now. */
+  getDiaryConfig() {
+    return resolveDiaryConfig(this.app, this.settings, this.coreDaily);
+  }
+  /** Re-read the core Daily notes config, which can change outside this plugin. */
+  async refreshDiaryConfig() {
+    this.coreDaily = await readCoreDailyNotes(this.app);
   }
   timerDeps() {
     return {
@@ -2435,7 +2502,7 @@ var ThinkersPlugin = class extends import_obsidian10.Plugin {
       app: this.app,
       storage: this.storage,
       getSettings: () => this.settings,
-      getDiaryConfig: () => this.diaryConfig
+      getDiaryConfig: () => this.getDiaryConfig()
     };
   }
   /** Every open timer panel, whichever of its view types it was created as. */
@@ -2547,7 +2614,7 @@ var ThinkersPlugin = class extends import_obsidian10.Plugin {
     this.addCommand({
       id: "open-diary",
       name: t("command.diary"),
-      callback: () => void openDiaryForDate(this.app, this.diaryConfig, todayKey())
+      callback: () => void openDiaryForDate(this.app, this.getDiaryConfig(), todayKey())
     });
   }
   /** Opens the timer panel, by default in the right sidebar. */

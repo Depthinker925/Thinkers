@@ -2,6 +2,7 @@ import { App, Notice, normalizePath, TFile } from "obsidian";
 import type { DayRecord, ThinkersSettings } from "./types";
 import { DEFAULT_FOCUS_TAG, DEFAULT_SETTINGS } from "./types";
 import { t } from "./i18n";
+import { ensureFolder } from "./vault";
 import {
   dateKey,
   focusRecords,
@@ -179,7 +180,7 @@ export class DayStore {
       }
       try {
         if (!file) {
-          await this.ensureFolder(parent(path));
+          await ensureFolder(this.app, parent(path));
           const records = syncRestRecords(sortRecords(fn([])));
           this.lastSelfWrite.set(path, Date.now());
           const created = await this.app.vault.create(path, this.serialize(day, records));
@@ -208,22 +209,6 @@ export class DayStore {
     const next = previous.then(task, task);
     this.queues.set(day, next.catch(() => {}));
     return next;
-  }
-
-  private async ensureFolder(path: string): Promise<void> {
-    if (path.length === 0) return;
-    const parts = path.split("/").filter((p) => p.length > 0);
-    let current = "";
-    for (const part of parts) {
-      current = current.length > 0 ? `${current}/${part}` : part;
-      if (!this.app.vault.getFolderByPath(current)) {
-        try {
-          await this.app.vault.createFolder(current);
-        } catch (err) {
-          if (!this.app.vault.getFolderByPath(current)) throw err;
-        }
-      }
-    }
   }
 
   private async backupCorrupted(file: TFile, day: string): Promise<void> {

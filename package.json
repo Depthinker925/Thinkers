@@ -1,6 +1,6 @@
 {
   "name": "thinkers",
-  "version": "3.0.0",
+  "version": "108.9.25",
   "description": "A focus timer for the Obsidian right sidebar: Pomodoro and stopwatch, with sessions saved as plain markdown.",
   "main": "main.js",
   "scripts": {
